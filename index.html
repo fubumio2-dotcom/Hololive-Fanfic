@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌐 FanFic Reader</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: url("assets/backgrounds/fubuki.jpg") no-repeat center center fixed;
+      background-size: cover;
+      color: #222;
+    }
+    header {
+      background: rgba(76, 175, 80, 0.9);
+      color: #fff;
+      padding: 12px;
+      font-size: 20px;
+      text-align: center;
+      position: relative;
+    }
+
+    /* 📚 Danh sách fanfic */
+    .fanfic-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      padding: 15px;
+    }
+    .fanfic-card {
+      background: rgba(255,255,255,0.9);
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.3s, opacity 0.6s ease, transform 0.6s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      opacity: 0;                /* ẩn trước */
+      transform: translateY(30px); /* trượt lên */
+    }
+    .fanfic-card.show { 
+      opacity: 1; 
+      transform: translateY(0); 
+    }
+    .fanfic-card:hover { transform: scale(1.05); }
+    .fanfic-card img {
+      width: 100%;
+      height: 220px;
+      object-fit: contain;
+      background: #000;
+    }
+    .fanfic-card h3 {
+      margin: 0;
+      padding: 10px;
+      font-size: 15px;
+      text-align: center;
+      background: #eee;
+      width: 100%;
+    }
+
+    /* 📖 Chi tiết fanfic */
+    #fanficDetail {
+      display: none;
+      padding: 15px;
+    }
+    #fanficDetail img {
+      width: 100%;
+      max-height: 500px;
+      object-fit: contain;
+      background: #000;
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+    #fanficDetail h2 { margin: 10px 0 5px; }
+    #fanficDetail p { margin: 5px 0; color: #333; }
+
+    .chapter-list { margin-top: 20px; }
+    .chapter-btn {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      margin: 5px 0;
+      border: none;
+      border-radius: 6px;
+      background: #1976d2;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .chapter-btn:hover { background: #1259a7; }
+
+    #storyBox {
+      margin-top: 20px;
+      background: rgba(255,255,255,0.95);
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      min-height: 200px;
+    }
+    #storyBox iframe {
+      width: 100%;
+      height: 70vh;
+      border: none;
+    }
+
+    /* 🎵 Nút nhạc */
+    #musicBtn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #222;
+      color: #fff;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #musicBtn:hover { background: #555; }
+
+    /* 📱 Mobile */
+    @media (max-width: 600px) {
+      .fanfic-card img { height: 180px; }
+      .fanfic-card h3 { font-size: 14px; }
+      .chapter-btn { font-size: 14px; padding: 10px; }
+      #fanficDetail img { max-height: 300px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  📖 FanFic Reader
+  <button id="musicBtn" onclick="toggleMusic()">🎵 Play</button>
+</header>
+
+<!-- 📚 Danh sách fanfic -->
+<div class="fanfic-list" id="fanficList"></div>
+
+<!-- 📖 Chi tiết fanfic -->
+<div id="fanficDetail">
+  <button onclick="backToList()">⬅ Quay lại</button>
+  <img id="detailArt" src="" alt="Fanfic Art">
+  <h2 id="detailTitle"></h2>
+  <p><b>Tác giả:</b> <span id="detailAuthor"></span></p>
+  <p><b>Thể loại:</b> <span id="detailGenre"></span></p>
+  <p id="detailDesc"></p>
+
+  <div class="chapter-list" id="chapterList"></div>
+  <div id="storyBox"></div>
+</div>
+
+<!-- 🎵 Playlist nhạc -->
+<audio id="bgMusic" loop></audio>
+
+<script>
+  // 📚 Dữ liệu fanfic
+  const fanfics = [
+    {
+      key: "tgt",
+      title: "Thế Giới Hoang Tàn",
+      author: "Đang cập nhật",
+      genre: "Hành động, Giả tưởng",
+      desc: "Bạn tỉnh dậy giữa thế giới hoang tàn với những bí ẩn xung quanh.",
+      art: "", // chưa có art
+      chapters: [
+        { name: "Chương 1", url: "https://docs.google.com/document/d/1NvLnmmgdL0uASLJ2NZSlfNfbNnwunj0Kad2gM0oOW-w/preview" }
+      ]
+    },
+    {
+      key: "self",
+      title: "The Second Self",
+      author: "Tác giả A",
+      genre: "Tâm lý, Khoa học viễn tưởng",
+      desc: "Một hành trình đối diện với chính bản thân ở thế giới song song.",
+      art: "assets/backgrounds_fanfic/the_second_self.jpg",
+      chapters: [
+        { name: "Chương 1", url: "https://docs.google.com/document/d/1c_eGuc7gZjbQaPpaJBtYa6JdGDzaI-I4f7lkj0gD-xk/preview" },
+        { name: "Chương 2", url: "https://docs.google.com/document/d/1RCWd9YIP9UYU8F_68ERaXoAecOC1rU6m8bdAL1W8WUc/preview" }
+      ]
+    },
+    {
+      key: "distance",
+      title: "The Distance Between Us",
+      author: "Tác giả B",
+      genre: "Lãng mạn, Drama",
+      desc: "Khoảng cách giữa hai người, liệu có thể vượt qua?",
+      art: "assets/backgrounds_fanfic/fubumio.jpg",
+      chapters: [
+        { name: "Chương 1", url: "https://docs.google.com/document/d/1mLlBZRJg0ytnEv22jqZLmBBEvjEurHWKVAtHiZsVlFY/preview" },
+        { name: "Chương 2", url: "https://docs.google.com/document/d/1oOUCrLihHC3Da4ldVoNf1RaoDe03laoNXWdnQZ5sZjs/preview" }
+      ]
+    }
+  ];
+
+  // Load danh sách fanfic
+  const listEl = document.getElementById("fanficList");
+  fanfics.forEach(fic => {
+    const card = document.createElement("div");
+    card.className = "fanfic-card";
+    card.innerHTML = `
+      <img src="${fic.art || 'https://via.placeholder.com/300x400?text=No+Art'}" alt="${fic.title}">
+      <h3>${fic.title}</h3>
+    `;
+    card.onclick = () => showDetail(fic.key);
+    listEl.appendChild(card);
+  });
+
+  function showDetail(key) {
+    const fic = fanfics.find(f => f.key === key);
+    document.getElementById("fanficList").style.display = "none";
+    document.getElementById("fanficDetail").style.display = "block";
+
+    document.getElementById("detailArt").src = fic.art || "https://via.placeholder.com/600x800?text=No+Art";
+    document.getElementById("detailTitle").textContent = fic.title;
+    document.getElementById("detailAuthor").textContent = fic.author;
+    document.getElementById("detailGenre").textContent = fic.genre;
+    document.getElementById("detailDesc").textContent = fic.desc;
+
+    // Chapters
+    const chapterList = document.getElementById("chapterList");
+    chapterList.innerHTML = "<h3>📚 Danh sách chương:</h3>";
+    fic.chapters.forEach(ch => {
+      const btn = document.createElement("button");
+      btn.className = "chapter-btn";
+      btn.textContent = ch.name;
+      btn.onclick = () => loadChapter(ch.url);
+      chapterList.appendChild(btn);
+    });
+
+    document.getElementById("storyBox").innerHTML = "";
+  }
+
+  function backToList() {
+    document.getElementById("fanficDetail").style.display = "none";
+    document.getElementById("fanficList").style.display = "grid";
+    document.getElementById("storyBox").innerHTML = "";
+  }
+
+  function loadChapter(url) {
+    document.getElementById("storyBox").innerHTML = `<iframe src="${url}"></iframe>`;
+  }
+
+  // 🎵 Playlist nhạc
+  const playlist = [
+    "assets/audio/ashagain.mp3",
+    "assets/audio/konkonbeats.mp3"
+  ];
+  let currentTrack = 0;
+  const music = document.getElementById("bgMusic");
+  const musicBtn = document.getElementById("musicBtn");
+
+  function toggleMusic() {
+    if (music.paused) {
+      music.src = playlist[currentTrack];
+      music.play();
+      musicBtn.textContent = "⏸ Pause";
+    } else {
+      music.pause();
+      musicBtn.textContent = "🎵 Play";
+    }
+  }
+
+  music.addEventListener("ended", () => {
+    currentTrack = (currentTrack + 1) % playlist.length;
+    music.src = playlist[currentTrack];
+    music.play();
+  });
+
+  // 👀 Hiệu ứng khi scroll
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("show");
+      }
+    });
+  }, { threshold: 0.2 });
+
+  document.querySelectorAll(".fanfic-card").forEach(card => {
+    observer.observe(card);
+  });
+</script>
+
+</body>
+</html>
